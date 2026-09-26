@@ -2,7 +2,10 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#4a6fa5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Stock Control Task Board</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
@@ -43,18 +46,24 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             background-color: var(--background-color);
             color: var(--text-color);
             line-height: 1.6;
             min-height: 100vh;
             transition: var(--transition);
+            overflow-x: hidden;
         }
 
         .container {
             max-width: 1200px;
+            width: min(1200px, calc(100% - 32px));
             margin: 0 auto;
-            padding: 20px;
+            padding: 20px 0 40px;
         }
 
         .theme-toggle {
@@ -87,6 +96,7 @@
             align-items: center;
             min-height: 100vh;
             background-color: var(--background-color);
+            padding: 20px;
         }
 
         .login-box {
@@ -102,7 +112,7 @@
         .login-box h2 {
             color: var(--primary-color);
             margin-bottom: 30px;
-            font-size: 2rem;
+            font-size: clamp(1.6rem, 4vw, 2rem);
         }
 
         .form-group {
@@ -170,6 +180,7 @@
             color: var(--danger-color);
             margin-top: 15px;
             font-weight: 600;
+            min-height: 24px;
         }
 
         #mainContent {
@@ -187,7 +198,7 @@
 
         .header h1 {
             color: var(--primary-color);
-            font-size: 2.2rem;
+            font-size: clamp(1.8rem, 4vw, 2.4rem);
         }
 
         .user-info {
@@ -198,6 +209,7 @@
             border-radius: var(--border-radius);
             background-color: var(--card-color);
             box-shadow: var(--box-shadow);
+            flex-wrap: wrap;
         }
 
         .user-info i {
@@ -246,8 +258,15 @@
             font-weight: 600;
         }
 
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         table {
             width: 100%;
+            min-width: 760px;
             border-collapse: collapse;
             margin-top: 20px;
             background-color: var(--card-color);
@@ -260,6 +279,7 @@
             padding: 15px;
             border-bottom: 1px solid #ddd;
             text-align: left;
+            vertical-align: top;
         }
 
         th {
@@ -320,17 +340,85 @@
         .restore-btn { background-color: #9e9e9e; }
         .restore-btn:hover { background-color: #757575; }
 
+        .archive-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #ddd;
+            flex-wrap: wrap;
+        }
+
         @media (max-width: 768px) {
-            .container { padding: 15px; }
-            th, td { padding: 12px 10px; font-size: 14px; }
-            .header { flex-direction: column; align-items: flex-start; }
-            .user-info { width: 100%; justify-content: space-between; }
-            .task-form, .login-box { padding: 25px; }
+            .container {
+                width: min(100%, calc(100% - 20px));
+                padding-top: 16px;
+            }
+
+            .login-box,
+            .task-form,
+            .archive-section {
+                padding: 20px 16px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .user-info {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .logout-btn {
+                margin-left: 0;
+            }
+
+            .table-wrapper {
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 620px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .theme-toggle {
+                top: 12px;
+                right: 12px;
+                width: 46px;
+                height: 46px;
+            }
+
+            .status-filter {
+                align-items: stretch;
+            }
+
+            .status-filter select {
+                width: 100%;
+            }
+
+            .user-info {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            .actions {
+                gap: 6px;
+            }
+
+            .actions button {
+                flex: 1 1 42px;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
-    <button class="theme-toggle" onclick="toggleTheme()">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Przełącz motyw">
         <i class="fas fa-moon"></i>
     </button>
 
@@ -405,7 +493,7 @@
             </select>
         </div>
 
-        <div>
+        <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -497,6 +585,7 @@
             document.getElementById('loginSection').style.display = 'flex';
             document.getElementById('mainContent').style.display = 'none';
             document.getElementById('password').value = '';
+            document.getElementById('errorMessage').textContent = '';
         }
 
         function toggleTheme() {
@@ -522,18 +611,18 @@
                     const status = getStatus(task);
                     return `
                         <tr>
-                            <td>${task.orderDate}</td>
-                            <td>${task.assignedTo}</td>
-                            <td>${task.productName}</td>
-                            <td>${task.quantity}</td>
-                            <td>${task.dueDate}</td>
-                            <td><span class="status ${status}">${status === 'pending' ? 'do zrobienia' : status === 'completed' ? 'zakończone' : 'po terminie'}</span></td>
-                            <td>${task.notes || '-'}</td>
-                            <td>
+                            <td data-label="Data zlecenia">${task.orderDate}</td>
+                            <td data-label="Komu zlecono">${task.assignedTo}</td>
+                            <td data-label="Produkt">${task.productName}</td>
+                            <td data-label="Ilość">${task.quantity}</td>
+                            <td data-label="Termin">${task.dueDate}</td>
+                            <td data-label="Status"><span class="status ${status}">${status === 'pending' ? 'do zrobienia' : status === 'completed' ? 'zakończone' : 'po terminie'}</span></td>
+                            <td data-label="Uwagi">${task.notes || '-'}</td>
+                            <td data-label="Akcje">
                                 <div class="actions">
-                                    <button class="complete-btn" data-id="${task.id}" data-action="complete"><i class="fas fa-check"></i></button>
-                                    <button class="archive-btn" data-id="${task.id}" data-action="archive"><i class="fas fa-archive"></i></button>
-                                    <button class="delete-btn" data-id="${task.id}" data-action="delete"><i class="fas fa-trash"></i></button>
+                                    <button class="complete-btn" data-id="${task.id}" data-action="complete" aria-label="Zaznacz jako zakończone"><i class="fas fa-check"></i></button>
+                                    <button class="archive-btn" data-id="${task.id}" data-action="archive" aria-label="Archiwizuj"><i class="fas fa-archive"></i></button>
+                                    <button class="delete-btn" data-id="${task.id}" data-action="delete" aria-label="Usuń"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -547,7 +636,7 @@
                 archiveList.innerHTML = '<p>Brak zadań w archiwum.</p>';
             } else {
                 archiveList.innerHTML = archived.map(task => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #ddd;">
+                    <div class="archive-item">
                         <div>
                             <strong>${task.productName}</strong><br>
                             <small>${task.assignedTo} • ${task.dueDate}</small>
